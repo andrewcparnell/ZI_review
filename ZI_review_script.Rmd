@@ -1,0 +1,193 @@
+---
+title: 'Code associated with the paper ''Zero inflation modelling of count data: a
+  review'''
+output:
+  html_document:
+    df_print: paged
+---
+```{r, include = FALSE}
+# Boiler plate code.
+rm(list = ls())
+library(ggplot2)
+theme_set(theme_bw())
+```
+This notebook contains the code and plots for the paper `Zero inflation modelling of count data: a review' by Haslett et al (Arxiv link forthcoming). 
+
+The data we use are stored in the GitHub repository and can be loaded in with
+```{r}
+library(tidyverse)
+raw_fish = read_csv("fish.csv")
+head(raw_fish)
+```
+
+From the paper __The data set concerns the number fish caught by groups attending a US state park (response variable `count`). The data were previously analysed by Saffari et al 20XX. Many of the groups did not fish and thus these are recorded as zeros. Covariates are available in the number of children in the group (`children`), the number of adults in the group (`adults`), and whether the group brought a camper van with them (`camper`). All three covariates are discrete. There were two very large values of `count` (65 and 149) which in the previous analysis were used to allow for double-censoring (a double hurdle model) but which we remove for simplicity in exposition.__
+
+So the response variable is `count`, and the covariates are `camper`, `child`, and `adults` (created from `persons - child`), We centre the covariates to aid interpretation of the intercept in later sections.
+
+```{r}
+fish = raw_fish %>% filter(count < 60) %>% 
+  mutate(adults = persons - child,
+         adults2 = adults - mean(adults),
+         child2 = child - mean(child),
+         camper2 = camper - mean(camper))
+```
+
+Create some simple plots of the data
+```{r}
+library(gridExtra)
+p1 = ggplot(fish, aes(x = count)) +
+  geom_histogram(bins = 30) + 
+  xlab("Number of fish caught")
+p2 = ggplot(fish, aes(x = child, y = count)) + 
+  geom_point() + 
+  geom_jitter(width = 0.1) +
+  xlab('Number of children in group') + 
+  ylab('Number of fish caught')
+p3 = ggplot(fish, aes(x = adults, y = count)) + 
+  geom_point() + 
+  geom_jitter(width = 0.1) +
+  xlab('Number of adults in group') + 
+  ylab('Number of fish caught')
+p4 = ggplot(fish, aes(x = as.factor(camper), y = count)) + 
+  geom_boxplot() + 
+  xlab('Whether camper van brought on trip\n(1 = yes)') + 
+  ylab('Number of fish caught')
+grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
+```
+
+We now go through each package in turn, first fitting a simple zero-inflated Poisson model for each, and then looking at some of the other features. Many of the packages use the same formula throughout so we set this at the start
+```{r}
+fish_formula = count ~ child2 + camper2 + adults2
+```
+
+
+# Package 1 - `zic`
+
+```{r}
+library(zic)
+fit_zic = zic(formula = fish_formula, 
+              data = fish, 
+              a0 = 10.0, # Prior for intercept variance
+              b0 = 10.0, # Prior for coefficient variances
+              c0 = 10.0, # Prior for 
+              d0 = 10.0, # Prior for 
+              e0 = 1.0, # Prior for 
+              f0 = 1.0, # Prior for 
+              n.burnin = 10000, # Prior for 
+              n.mcmc = 100000, # Prior for 
+              n.thin = 100, # Prior for 
+              tune = 1.0, # Prior for 
+              scale = FALSE) # whether to scale covariates
+
+# alpha is the mean intercept, 'gamma' the zero-part intercept - not mentioned in model
+# beta and delta are the coefficients, sigma is the over dispersion parameter
+plot(cbind(fit_zic$alpha, fit_zic$gamma)) # Lots of correlation here - a bit better
+qplot(fit_zic$alpha, geom = 'histogram', main = 'Intercept for mean') 
+qplot(fit_zic$gamma, geom = 'histogram', main = 'Intercept for ZI') # Looks like it didn't converge
+qplot(fit_zic$beta[,1], geom = 'histogram', main = 'Coef of persons') 
+qplot(fit_zic$beta[,2], geom = 'histogram', main = 'Coef of camper')
+qplot(fit_zic$sigma, geom = 'histogram', main = 'OD parameter')
+
+# quant(fit_zic$beta[,1])
+# quant(fit_zic$beta[,2]) # Effect of camper not quite so well estimated
+# quant(fit_zic$sigma)
+# My guess is that the variance of y is exp this plus exp the mean
+```
+
+# Package 2 - `pscl`
+
+```{r}
+library(pscl)
+fit_pscl1 = pscl::hurdle(fish_formula, data = fish, dist = 'poisson',
+                         zero.dist = 'binomial')
+summary(fit_pscl1)
+
+fit_pscl2 = pscl::hurdle(fish_formula, data = fish, dist = 'negbin',
+                         zero.dist = 'binomial')
+summary(fit_pscl2)
+
+fit_pscl3 = pscl::hurdle(fish_formula, data = fish, dist = 'geometric',
+                         zero.dist = 'binomial')
+summary(fit_pscl3)
+
+# Note that all of the zero models are identifical
+
+# Then you've got all the zero-inflated models
+fit_pscl4 = zeroinfl(fish_formula, data = fish, 
+                     dist = 'poisson',
+                     link = 'logit')
+summary(fit_pscl4)
+
+# try a hurdle model with a different zero structure
+fit_pscl5 = pscl::hurdle(fish_formula, data = fish, dist = 'poisson',
+                         zero.dist = 'poisson')
+summary(fit_pscl5)
+
+# Look at that! Censored Poisson
+```
+
+# Package 3 - `VGAM`
+
+```{r}
+library(VGAM)
+fit_VGAM1 = vglm(fish_formula, zipoissonff, data = fish)
+summary(fit_VGAM1)
+
+
+fit_VGAM2 <- vglm(fish_formula, zinegbinomialff, data = fish)
+summary(fit_VGAM2)
+# Warning about no zero inflation?
+
+# Very confusing results
+
+# Wonder if VGAM can do multivariate inflations?
+```
+
+# Package 4 - `gamlss`
+
+```{r}
+library(gamlss)
+# Has lots of ZI/ZA models - lots for 
+# Does Zero inflated Beta zero inflated	BEZI()	3
+# Zero adjusted binomial	ZABI()	2
+# Zero adjusted beta neg. bin.	ZABNB()	4
+# Zero adjusted IG	ZAIG()	2
+# Zero adjusted logarithmic	ZALG()	2
+# Zero adjusted neg. bin.	ZANBI()	3
+fit_gamlss_1 = gamlss(fish_formula, data = fish, family=ZANBI)
+summary(fit_gamlss_1)
+
+# Zero adjusted poisson	ZAP()	2
+fit_gamlss_2 = gamlss(fish_formula, data = fish, family=ZAP)
+summary(fit_gamlss_2)
+
+
+# Zero adjusted Sichel	ZASICHEL()	4 - AKA Inverse Gaussian
+# Zero adjusted Zipf	ZAZIPF()	2
+# Zero inflated binomial	ZIBI()	2
+# Zero inflated beta neg. bin.	ZIBNB()	4
+fit_gamlss_3 = gamlss(fish_formula, data = fish, family=ZIBNB)
+# DIDN"T CONVERGE
+
+# Zero inflated neg. bin.	ZINBI()	3
+fit_gamlss_4 = gamlss(fish_formula, data = fish, family=ZINBI)
+summary(fit_gamlss_4)
+
+# This looks dodgy too
+
+# Zero inflated poisson	ZIP()	2
+fit_gamlss_5 = gamlss(fish_formula, data = fish, family=ZIP)
+summary(fit_gamlss_5)
+
+# Zero inf. poiss.(mu as mean)	ZIP2()	2
+fit_gamlss_6 = gamlss(fish_formula, data = fish, family=ZIP2)
+summary(fit_gamlss_6)
+# ALSO DIDN"T CONVERGE
+
+# Zero inflated PIG	ZIPIG()	3 - Poisson inverse Gaussin
+# Zero inflated Sichel	ZISICHEL()	4
+```
+
+# Package 6 - `INLA`
+
+Not done yet

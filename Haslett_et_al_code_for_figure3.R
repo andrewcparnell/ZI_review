@@ -94,7 +94,7 @@ ggplot(
     values = linetypes
   ) +
   geom_line(size = 1.0) +
-  xlab(expression(pi[0])) +
+  xlab(expression(pi[0]^P)) +
   ylab(expression(tilde(pi)[0])) +
   # labs(x = "Base probability of 0 (Poisson)",
   #      y = "Altered\nprobability\nof 0") +

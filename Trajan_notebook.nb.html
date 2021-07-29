@@ -217,208 +217,62 @@ pre code {
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-text-begin -->
-<p>This notebook contains the code and plots for the paper `Zero inflation modelling of count data: a review’ by Haslett et al (Arxiv link forthcoming).</p>
-<p>The data we use are stored in the GitHub repository and can be loaded in with</p>
+<p>Read in the data:</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeSh0aWR5dmVyc2UpXG5yYXdfZmlzaCA9IHJlYWRfY3N2KFwiZmlzaC5jc3ZcIilcbmhlYWQocmF3X2Zpc2gpXG5gYGAifQ== -->
-<pre class="r"><code>library(tidyverse)
-raw_fish = read_csv(&quot;fish.csv&quot;)
-head(raw_fish)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxudHJhamFuIDwtIGFzLmRhdGEuZnJhbWUocmVhZFJEUygndHJhamFuX3JlY29kZWQucmRzJykpXG5gYGAifQ== -->
+<pre class="r"><code>trajan &lt;- as.data.frame(readRDS(&#39;trajan_recoded.rds&#39;))</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<p>From the paper <strong>The data set concerns the number fish caught by groups attending a US state park (response variable <code>count</code>). The data were previously analysed by Saffari et al 20XX. Many of the groups did not fish and thus these are recorded as zeros. Covariates are available in the number of children in the group (<code>children</code>), the number of adults in the group (<code>adults</code>), and whether the group brought a camper van with them (<code>camper</code>). All three covariates are discrete. There were two very large values of <code>count</code> (65 and 149) which in the previous analysis were used to allow for double-censoring (a double hurdle model) but which we remove for simplicity in exposition.</strong></p>
-<p>So the response variable is <code>count</code>, and the covariates are <code>camper</code>, <code>child</code>, and <code>adults</code> (created from <code>persons - child</code>), We centre the covariates to aid interpretation of the intercept in later sections.</p>
+<p>Source in our helper ZI functions:</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmlzaCA9IHJhd19maXNoICU+JSBmaWx0ZXIoY291bnQgPCA2MCkgJT4lIFxuICBtdXRhdGUoYWR1bHRzID0gcGVyc29ucyAtIGNoaWxkLFxuICAgICAgICAgYWR1bHRzMiA9IGFkdWx0cyAtIG1lYW4oYWR1bHRzKSxcbiAgICAgICAgIGNoaWxkMiA9IGNoaWxkIC0gbWVhbihjaGlsZCksXG4gICAgICAgICBjYW1wZXIyID0gY2FtcGVyIC0gbWVhbihjYW1wZXIpKVxuYGBgIn0= -->
-<pre class="r"><code>fish = raw_fish %&gt;% filter(count &lt; 60) %&gt;% 
-  mutate(adults = persons - child,
-         adults2 = adults - mean(adults),
-         child2 = child - mean(child),
-         camper2 = camper - mean(camper))</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc291cmNlKCdaSS5SJylcbmBgYCJ9 -->
+<pre class="r"><code>source(&#39;ZI.R&#39;)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<p>Create some simple plots of the data</p>
+<p>Fit various models:</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShncmlkRXh0cmEpXG5wMSA9IGdncGxvdChmaXNoLCBhZXMoeCA9IGNvdW50KSkgK1xuICBnZW9tX2hpc3RvZ3JhbShiaW5zID0gMzApICsgXG4gIHhsYWIoXCJOdW1iZXIgb2YgZmlzaCBjYXVnaHRcIilcbnAyID0gZ2dwbG90KGZpc2gsIGFlcyh4ID0gY2hpbGQsIHkgPSBjb3VudCkpICsgXG4gIGdlb21fcG9pbnQoKSArIFxuICBnZW9tX2ppdHRlcih3aWR0aCA9IDAuMSkgK1xuICB4bGFiKCdOdW1iZXIgb2YgY2hpbGRyZW4gaW4gZ3JvdXAnKSArIFxuICB5bGFiKCdOdW1iZXIgb2YgZmlzaCBjYXVnaHQnKVxucDMgPSBnZ3Bsb3QoZmlzaCwgYWVzKHggPSBhZHVsdHMsIHkgPSBjb3VudCkpICsgXG4gIGdlb21fcG9pbnQoKSArIFxuICBnZW9tX2ppdHRlcih3aWR0aCA9IDAuMSkgK1xuICB4bGFiKCdOdW1iZXIgb2YgYWR1bHRzIGluIGdyb3VwJykgKyBcbiAgeWxhYignTnVtYmVyIG9mIGZpc2ggY2F1Z2h0JylcbnA0ID0gZ2dwbG90KGZpc2gsIGFlcyh4ID0gYXMuZmFjdG9yKGNhbXBlciksIHkgPSBjb3VudCkpICsgXG4gIGdlb21fYm94cGxvdCgpICsgXG4gIHhsYWIoJ1doZXRoZXIgY2FtcGVyIHZhbiBicm91Z2h0IG9uIHRyaXBcXG4oMSA9IHllcyknKSArIFxuICB5bGFiKCdOdW1iZXIgb2YgZmlzaCBjYXVnaHQnKVxuZ3JpZC5hcnJhbmdlKHAxLCBwMiwgcDMsIHA0LCBuY29sID0gMiwgbnJvdyA9IDIpXG5gYGAifQ== -->
-<pre class="r"><code>library(gridExtra)
-p1 = ggplot(fish, aes(x = count)) +
-  geom_histogram(bins = 30) + 
-  xlab(&quot;Number of fish caught&quot;)
-p2 = ggplot(fish, aes(x = child, y = count)) + 
-  geom_point() + 
-  geom_jitter(width = 0.1) +
-  xlab(&#39;Number of children in group&#39;) + 
-  ylab(&#39;Number of fish caught&#39;)
-p3 = ggplot(fish, aes(x = adults, y = count)) + 
-  geom_point() + 
-  geom_jitter(width = 0.1) +
-  xlab(&#39;Number of adults in group&#39;) + 
-  ylab(&#39;Number of fish caught&#39;)
-p4 = ggplot(fish, aes(x = as.factor(camper), y = count)) + 
-  geom_boxplot() + 
-  xlab(&#39;Whether camper van brought on trip\n(1 = yes)&#39;) + 
-  ylab(&#39;Number of fish caught&#39;)
-grid.arrange(p1, p2, p3, p4, ncol = 2, nrow = 2)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBTdGFuZGFyZCBQb2lzc29uXG50cmFqYW5fcG8gPC0gZ2xtKG5zaG9vdHMgfiAwICsgcGVyaW9kMyA6IGhvcm1vbmUzLCBkYXRhID0gdHJhamFuLCBmYW1pbHkgPSBwb2lzc29uKVxuIyBOQi1saW4gKGNhbGxlZCBOQklJIGJ5IGdhbWxzcylcbnRyYWphbl9uYmxpbiA8LSBnYW1sc3MobnNob290cyB+IDAgKyBwZXJpb2QzIDogaG9ybW9uZTMsIGRhdGEgPSB0cmFqYW4sIGZhbWlseSA9IE5CSUkpXG4jIE5CLXF1YWQgKGNhbGxlZCBOQkkgYnkgZ2FtbHNzKVxudHJhamFuX25icXVhZCA8LSBnYW1sc3MobnNob290cyB+IDAgKyBwZXJpb2QzIDogaG9ybW9uZTMsIGRhdGEgPSB0cmFqYW4sIGZhbWlseSA9IE5CSSlcbiMgWkkgdHlwZXMgQSB0byBEXG50cmFqYW5fcG9fdHlwZUEgPC0gWkkobnNob290cyB+IDAgKyBwZXJpb2QzIDogaG9ybW9uZTMsIGRhdGEgPSB0cmFqYW4sIFpJX3R5cGUgPSBcIkFcIiwgZmFtaWx5ID0gXCJwb2lzc29uXCIpXG5gYGAifQ== -->
+<pre class="r"><code># Standard Poisson
+trajan_po &lt;- glm(nshoots ~ 0 + period3 : hormone3, data = trajan, family = poisson)
+# NB-lin (called NBII by gamlss)
+trajan_nblin &lt;- gamlss(nshoots ~ 0 + period3 : hormone3, data = trajan, family = NBII)
+# NB-quad (called NBI by gamlss)
+trajan_nbquad &lt;- gamlss(nshoots ~ 0 + period3 : hormone3, data = trajan, family = NBI)
+# ZI types A to D
+trajan_po_typeA &lt;- ZI(nshoots ~ 0 + period3 : hormone3, data = trajan, ZI_type = &quot;A&quot;, family = &quot;poisson&quot;)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<p>We now go through each package in turn, first fitting a simple zero-inflated Poisson model for each, and then looking at some of the other features. Many of the packages use the same formula throughout so we set this at the start</p>
+<p>Summarise the models, e.g. for Type D:</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmlzaF9mb3JtdWxhID0gY291bnQgfiBjaGlsZDIgKyBjYW1wZXIyICsgYWR1bHRzMlxuYGBgIn0= -->
-<pre class="r"><code>fish_formula = count ~ child2 + camper2 + adults2</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxudHJhamFuX3BvX3R5cGVEICU+JSBwcmludFxuYGBgIn0= -->
+<pre class="r"><code>trajan_po_typeD %&gt;% print</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<div id="package-1---zic" class="section level1">
-<h1>Package 1 - <code>zic</code></h1>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeSh6aWMpXG5maXRfemljID0gemljKGZvcm11bGEgPSBmaXNoX2Zvcm11bGEsIFxuICAgICAgICAgICAgICBkYXRhID0gZmlzaCwgXG4gICAgICAgICAgICAgIGEwID0gMTAuMCwgIyBQcmlvciBmb3IgaW50ZXJjZXB0IHZhcmlhbmNlXG4gICAgICAgICAgICAgIGIwID0gMTAuMCwgIyBQcmlvciBmb3IgY29lZmZpY2llbnQgdmFyaWFuY2VzXG4gICAgICAgICAgICAgIGMwID0gMTAuMCwgIyBQcmlvciBmb3IgXG4gICAgICAgICAgICAgIGQwID0gMTAuMCwgIyBQcmlvciBmb3IgXG4gICAgICAgICAgICAgIGUwID0gMS4wLCAjIFByaW9yIGZvciBcbiAgICAgICAgICAgICAgZjAgPSAxLjAsICMgUHJpb3IgZm9yIFxuICAgICAgICAgICAgICBuLmJ1cm5pbiA9IDEwMDAwLCAjIFByaW9yIGZvciBcbiAgICAgICAgICAgICAgbi5tY21jID0gMTAwMDAwLCAjIFByaW9yIGZvciBcbiAgICAgICAgICAgICAgbi50aGluID0gMTAwLCAjIFByaW9yIGZvciBcbiAgICAgICAgICAgICAgdHVuZSA9IDEuMCwgIyBQcmlvciBmb3IgXG4gICAgICAgICAgICAgIHNjYWxlID0gRkFMU0UpICMgd2hldGhlciB0byBzY2FsZSBjb3ZhcmlhdGVzXG5cbiMgYWxwaGEgaXMgdGhlIG1lYW4gaW50ZXJjZXB0LCAnZ2FtbWEnIHRoZSB6ZXJvLXBhcnQgaW50ZXJjZXB0IC0gbm90IG1lbnRpb25lZCBpbiBtb2RlbFxuIyBiZXRhIGFuZCBkZWx0YSBhcmUgdGhlIGNvZWZmaWNpZW50cywgc2lnbWEgaXMgdGhlIG92ZXIgZGlzcGVyc2lvbiBwYXJhbWV0ZXJcbnBsb3QoY2JpbmQoZml0X3ppYyRhbHBoYSwgZml0X3ppYyRnYW1tYSkpICMgTG90cyBvZiBjb3JyZWxhdGlvbiBoZXJlIC0gYSBiaXQgYmV0dGVyXG5xcGxvdChmaXRfemljJGFscGhhLCBnZW9tID0gJ2hpc3RvZ3JhbScsIG1haW4gPSAnSW50ZXJjZXB0IGZvciBtZWFuJykgXG5xcGxvdChmaXRfemljJGdhbW1hLCBnZW9tID0gJ2hpc3RvZ3JhbScsIG1haW4gPSAnSW50ZXJjZXB0IGZvciBaSScpICMgTG9va3MgbGlrZSBpdCBkaWRuJ3QgY29udmVyZ2VcbnFwbG90KGZpdF96aWMkYmV0YVssMV0sIGdlb20gPSAnaGlzdG9ncmFtJywgbWFpbiA9ICdDb2VmIG9mIHBlcnNvbnMnKSBcbnFwbG90KGZpdF96aWMkYmV0YVssMl0sIGdlb20gPSAnaGlzdG9ncmFtJywgbWFpbiA9ICdDb2VmIG9mIGNhbXBlcicpXG5xcGxvdChmaXRfemljJHNpZ21hLCBnZW9tID0gJ2hpc3RvZ3JhbScsIG1haW4gPSAnT0QgcGFyYW1ldGVyJylcblxuIyBxdWFudChmaXRfemljJGJldGFbLDFdKVxuIyBxdWFudChmaXRfemljJGJldGFbLDJdKSAjIEVmZmVjdCBvZiBjYW1wZXIgbm90IHF1aXRlIHNvIHdlbGwgZXN0aW1hdGVkXG4jIHF1YW50KGZpdF96aWMkc2lnbWEpXG4jIE15IGd1ZXNzIGlzIHRoYXQgdGhlIHZhcmlhbmNlIG9mIHkgaXMgZXhwIHRoaXMgcGx1cyBleHAgdGhlIG1lYW5cbmBgYCJ9 -->
-<pre class="r"><code>library(zic)
-fit_zic = zic(formula = fish_formula, 
-              data = fish, 
-              a0 = 10.0, # Prior for intercept variance
-              b0 = 10.0, # Prior for coefficient variances
-              c0 = 10.0, # Prior for 
-              d0 = 10.0, # Prior for 
-              e0 = 1.0, # Prior for 
-              f0 = 1.0, # Prior for 
-              n.burnin = 10000, # Prior for 
-              n.mcmc = 100000, # Prior for 
-              n.thin = 100, # Prior for 
-              tune = 1.0, # Prior for 
-              scale = FALSE) # whether to scale covariates
-
-# alpha is the mean intercept, &#39;gamma&#39; the zero-part intercept - not mentioned in model
-# beta and delta are the coefficients, sigma is the over dispersion parameter
-plot(cbind(fit_zic$alpha, fit_zic$gamma)) # Lots of correlation here - a bit better
-qplot(fit_zic$alpha, geom = &#39;histogram&#39;, main = &#39;Intercept for mean&#39;) 
-qplot(fit_zic$gamma, geom = &#39;histogram&#39;, main = &#39;Intercept for ZI&#39;) # Looks like it didn&#39;t converge
-qplot(fit_zic$beta[,1], geom = &#39;histogram&#39;, main = &#39;Coef of persons&#39;) 
-qplot(fit_zic$beta[,2], geom = &#39;histogram&#39;, main = &#39;Coef of camper&#39;)
-qplot(fit_zic$sigma, geom = &#39;histogram&#39;, main = &#39;OD parameter&#39;)
-
-# quant(fit_zic$beta[,1])
-# quant(fit_zic$beta[,2]) # Effect of camper not quite so well estimated
-# quant(fit_zic$sigma)
-# My guess is that the variance of y is exp this plus exp the mean</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
+<!-- rnb-output-begin eyJkYXRhIjoiRmFtaWx5OiBwb2lzc29uOyBaSSB0eXBlIERcbiJ9 -->
+<pre><code>Family: poisson; ZI type D</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEuZnJhbWUiXSwibnJvdyI6OSwibmNvbCI6Niwic3VtbWFyeSI6eyJEZXNjcmlwdGlvbiI6WyJkZiBbOSDDlyA2XSJdfX0sInJkZiI6Ikg0c0lBQUFBQUFBQUF3dHlpVERtaXVCaVlHQmdabUJoQkpLc1FDWURhMmlJbTY0RkF3TUxFNUREeU1EQ3dBbWlLNERTd2tBR0d4QUxBREVuVklJcHQ1U3FMTmIweE56Y1JMZ2xFR3hVa0ZxVW1aOWlISkNSWDVJUFlWc3BXQ2hrNUpjV0ZWdGw1QmZsNXVlbEdqczVCaWhvbk52anEybWxZS1JuQk5WcGpFMm5vUmt4V2ttMTFFVFBoRnhMRVZwSnRkUkN6NEpjU3dsb3hXT3BvYm1lR1ZTckNhbTJndlZDb3BwYnd6T3ZKTFVvT2JXZ1JCUEk1UU1aYWYvamNsUnIrK1I3RGd4YUJxRkdpVFgydi96dlc2ZEV5ZHIvYzdrZ3ZGTEx3UDVuUE51M0tXNGxEZ3lyb1BLaVc0dGZiYzV3WUNpcTN2VHZhSzZEME95bGo0Ty9uNGVidHpFNjNHNjFXWlg5S3BrMUhJWnFMK0g4ZGFiMk5XOG5adGh2S2xWMTQxcm1ZNytPOTYxR3ozTVcrNDF6SHBSKys2c0VWMytoL2M5TzVVVnpZT1k1bUQyMWVHOXliYUdEOCttNkNmK25xemhZT0dUYzdsNVQ2T0RBSHA5L1NmNnpnK21mWDJ0dXZyQnpjTnozVi9HL25xZUQrZFlFeDA1ekh3Y1hUYTh2SDI2NE9oZ3hPV3h2TU1tRG1jZEFOWUNTWFZuekVuTlRpNkc1aUEwcXlGbVFXQVFVQmdZNUxBS1M4MVBUMGpLVE0xUHpTcUJDSEtuRkpabTVpU1dwTUQzRkpTbnhxVVZGK1RBOTdDWHhaWWs1cFhENWdxTDhwUGp5eEp3VU5CZHdGdVdYNjhGY3dRdks0ZzBRZDNLaU96VTVKN0VZNWxTWUlGZEtZa21pWGhySXVVRGVQelF0N1BrRkpabjVlVUJOVEtBaWlSVk5NMk1SbWdCL2FSN0lKU202eVJtbGVkbTZoaUFMd05JUXdBdGxjeUt4MlNCV012MkhHc1VLTllvdE5TODlNdy9tZTlhY3hLVFVIQ2lIRCtoanNJZjFDb295NFFIS0JSUXQxaXZKTDBtRXFlTkt6cytCaVlEOXh2QVBBSGRsR0dtSkJRQUEifQ== -->
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["parameter"],"name":[1],"type":["chr"],"align":["left"]},{"label":["coefficient"],"name":[2],"type":["chr"],"align":["left"]},{"label":["estimate"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["std_error"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["t_value"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["prob_wald"],"name":[6],"type":["dbl"],"align":["right"]}],"data":[{"1":"mu","2":"period3Photoperiod: 8 hours:hormone3BAP (μM): 2.2","3":"1.5516","4":"0.0678","5":"22.8954","6":"0"},{"1":"mu","2":"period3Photoperiod: 16 hours:hormone3BAP (μM): 2.2","3":"2.0206","4":"0.0510","5":"39.5898","6":"0"},{"1":"mu","2":"period3Photoperiod: 8 hours:hormone3BAP (μM): 4.4","3":"1.6445","4":"0.0678","5":"24.2516","6":"0"},{"1":"mu","2":"period3Photoperiod: 16 hours:hormone3BAP (μM): 4.4","3":"1.8918","4":"0.0590","5":"32.0576","6":"0"},{"1":"mu","2":"period3Photoperiod: 8 hours:hormone3BAP (μM): 8.8","3":"1.5857","4":"0.0721","5":"21.9882","6":"0"},{"1":"mu","2":"period3Photoperiod: 16 hours:hormone3BAP (μM): 8.8","3":"2.0831","4":"0.0587","5":"35.4921","6":"0"},{"1":"mu","2":"period3Photoperiod: 8 hours:hormone3BAP (μM): 17.6","3":"1.6303","4":"0.0688","5":"23.7085","6":"0"},{"1":"mu","2":"period3Photoperiod: 16 hours:hormone3BAP (μM): 17.6","3":"2.0559","4":"0.0510","5":"40.3226","6":"0"},{"1":"gamma","2":"(Intercept)","3":"4.6520","4":"0.2583","5":"18.0088","6":"0"}],"options":{"columns":{"min":{},"max":[10],"total":[6]},"rows":{"min":[10],"max":[10],"total":[9]},"pages":{}}}
+  </script>
 </div>
-<div id="package-2---pscl" class="section level1">
-<h1>Package 2 - <code>pscl</code></h1>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShwc2NsKVxuZml0X3BzY2wxID0gcHNjbDo6aHVyZGxlKGZpc2hfZm9ybXVsYSwgZGF0YSA9IGZpc2gsIGRpc3QgPSAncG9pc3NvbicsXG4gICAgICAgICAgICAgICAgICAgICAgICAgemVyby5kaXN0ID0gJ2Jpbm9taWFsJylcbnN1bW1hcnkoZml0X3BzY2wxKVxuXG5maXRfcHNjbDIgPSBwc2NsOjpodXJkbGUoZmlzaF9mb3JtdWxhLCBkYXRhID0gZmlzaCwgZGlzdCA9ICduZWdiaW4nLFxuICAgICAgICAgICAgICAgICAgICAgICAgIHplcm8uZGlzdCA9ICdiaW5vbWlhbCcpXG5zdW1tYXJ5KGZpdF9wc2NsMilcblxuZml0X3BzY2wzID0gcHNjbDo6aHVyZGxlKGZpc2hfZm9ybXVsYSwgZGF0YSA9IGZpc2gsIGRpc3QgPSAnZ2VvbWV0cmljJyxcbiAgICAgICAgICAgICAgICAgICAgICAgICB6ZXJvLmRpc3QgPSAnYmlub21pYWwnKVxuc3VtbWFyeShmaXRfcHNjbDMpXG5cbiMgTm90ZSB0aGF0IGFsbCBvZiB0aGUgemVybyBtb2RlbHMgYXJlIGlkZW50aWZpY2FsXG5cbiMgVGhlbiB5b3UndmUgZ290IGFsbCB0aGUgemVyby1pbmZsYXRlZCBtb2RlbHNcbmZpdF9wc2NsNCA9IHplcm9pbmZsKGZpc2hfZm9ybXVsYSwgZGF0YSA9IGZpc2gsIFxuICAgICAgICAgICAgICAgICAgICAgZGlzdCA9ICdwb2lzc29uJyxcbiAgICAgICAgICAgICAgICAgICAgIGxpbmsgPSAnbG9naXQnKVxuc3VtbWFyeShmaXRfcHNjbDQpXG5cbiMgdHJ5IGEgaHVyZGxlIG1vZGVsIHdpdGggYSBkaWZmZXJlbnQgemVybyBzdHJ1Y3R1cmVcbmZpdF9wc2NsNSA9IHBzY2w6Omh1cmRsZShmaXNoX2Zvcm11bGEsIGRhdGEgPSBmaXNoLCBkaXN0ID0gJ3BvaXNzb24nLFxuICAgICAgICAgICAgICAgICAgICAgICAgIHplcm8uZGlzdCA9ICdwb2lzc29uJylcbnN1bW1hcnkoZml0X3BzY2w1KVxuXG4jIExvb2sgYXQgdGhhdCEgQ2Vuc29yZWQgUG9pc3NvblxuYGBgIn0= -->
-<pre class="r"><code>library(pscl)
-fit_pscl1 = pscl::hurdle(fish_formula, data = fish, dist = &#39;poisson&#39;,
-                         zero.dist = &#39;binomial&#39;)
-summary(fit_pscl1)
-
-fit_pscl2 = pscl::hurdle(fish_formula, data = fish, dist = &#39;negbin&#39;,
-                         zero.dist = &#39;binomial&#39;)
-summary(fit_pscl2)
-
-fit_pscl3 = pscl::hurdle(fish_formula, data = fish, dist = &#39;geometric&#39;,
-                         zero.dist = &#39;binomial&#39;)
-summary(fit_pscl3)
-
-# Note that all of the zero models are identifical
-
-# Then you&#39;ve got all the zero-inflated models
-fit_pscl4 = zeroinfl(fish_formula, data = fish, 
-                     dist = &#39;poisson&#39;,
-                     link = &#39;logit&#39;)
-summary(fit_pscl4)
-
-# try a hurdle model with a different zero structure
-fit_pscl5 = pscl::hurdle(fish_formula, data = fish, dist = &#39;poisson&#39;,
-                         zero.dist = &#39;poisson&#39;)
-summary(fit_pscl5)
-
-# Look at that! Censored Poisson</code></pre>
-<!-- rnb-source-end -->
+<!-- rnb-frame-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiQUlDID0gMTI4My4zMTIgXG4ifQ== -->
+<pre><code>AIC = 1283.312 </code></pre>
+<!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-</div>
-<div id="package-3---vgam" class="section level1">
-<h1>Package 3 - <code>VGAM</code></h1>
+<p>See the other functions in the repository for a more detailed set of calculations and plots that are possible</p>
 <!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShWR0FNKVxuZml0X1ZHQU0xID0gdmdsbShmaXNoX2Zvcm11bGEsIHppcG9pc3NvbmZmLCBkYXRhID0gZmlzaClcbnN1bW1hcnkoZml0X1ZHQU0xKVxuXG5cbmZpdF9WR0FNMiA8LSB2Z2xtKGZpc2hfZm9ybXVsYSwgemluZWdiaW5vbWlhbGZmLCBkYXRhID0gZmlzaClcbnN1bW1hcnkoZml0X1ZHQU0yKVxuIyBXYXJuaW5nIGFib3V0IG5vIHplcm8gaW5mbGF0aW9uP1xuXG4jIFZlcnkgY29uZnVzaW5nIHJlc3VsdHNcblxuIyBXb25kZXIgaWYgVkdBTSBjYW4gZG8gbXVsdGl2YXJpYXRlIGluZmxhdGlvbnM/XG5gYGAifQ== -->
-<pre class="r"><code>library(VGAM)
-fit_VGAM1 = vglm(fish_formula, zipoissonff, data = fish)
-summary(fit_VGAM1)
 
-
-fit_VGAM2 &lt;- vglm(fish_formula, zinegbinomialff, data = fish)
-summary(fit_VGAM2)
-# Warning about no zero inflation?
-
-# Very confusing results
-
-# Wonder if VGAM can do multivariate inflations?</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-</div>
-<div id="package-4---gamlss" class="section level1">
-<h1>Package 4 - <code>gamlss</code></h1>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShnYW1sc3MpXG4jIEhhcyBsb3RzIG9mIFpJL1pBIG1vZGVscyAtIGxvdHMgZm9yIFxuIyBEb2VzIFplcm8gaW5mbGF0ZWQgQmV0YSB6ZXJvIGluZmxhdGVkXHRCRVpJKClcdDNcbiMgWmVybyBhZGp1c3RlZCBiaW5vbWlhbFx0WkFCSSgpXHQyXG4jIFplcm8gYWRqdXN0ZWQgYmV0YSBuZWcuIGJpbi5cdFpBQk5CKClcdDRcbiMgWmVybyBhZGp1c3RlZCBJR1x0WkFJRygpXHQyXG4jIFplcm8gYWRqdXN0ZWQgbG9nYXJpdGhtaWNcdFpBTEcoKVx0MlxuIyBaZXJvIGFkanVzdGVkIG5lZy4gYmluLlx0WkFOQkkoKVx0M1xuZml0X2dhbWxzc18xID0gZ2FtbHNzKGZpc2hfZm9ybXVsYSwgZGF0YSA9IGZpc2gsIGZhbWlseT1aQU5CSSlcbnN1bW1hcnkoZml0X2dhbWxzc18xKVxuXG4jIFplcm8gYWRqdXN0ZWQgcG9pc3Nvblx0WkFQKClcdDJcbmZpdF9nYW1sc3NfMiA9IGdhbWxzcyhmaXNoX2Zvcm11bGEsIGRhdGEgPSBmaXNoLCBmYW1pbHk9WkFQKVxuc3VtbWFyeShmaXRfZ2FtbHNzXzIpXG5cblxuIyBaZXJvIGFkanVzdGVkIFNpY2hlbFx0WkFTSUNIRUwoKVx0NCAtIEFLQSBJbnZlcnNlIEdhdXNzaWFuXG4jIFplcm8gYWRqdXN0ZWQgWmlwZlx0WkFaSVBGKClcdDJcbiMgWmVybyBpbmZsYXRlZCBiaW5vbWlhbFx0WklCSSgpXHQyXG4jIFplcm8gaW5mbGF0ZWQgYmV0YSBuZWcuIGJpbi5cdFpJQk5CKClcdDRcbmZpdF9nYW1sc3NfMyA9IGdhbWxzcyhmaXNoX2Zvcm11bGEsIGRhdGEgPSBmaXNoLCBmYW1pbHk9WklCTkIpXG4jIERJRE5cIlQgQ09OVkVSR0VcblxuIyBaZXJvIGluZmxhdGVkIG5lZy4gYmluLlx0WklOQkkoKVx0M1xuZml0X2dhbWxzc180ID0gZ2FtbHNzKGZpc2hfZm9ybXVsYSwgZGF0YSA9IGZpc2gsIGZhbWlseT1aSU5CSSlcbnN1bW1hcnkoZml0X2dhbWxzc180KVxuXG4jIFRoaXMgbG9va3MgZG9kZ3kgdG9vXG5cbiMgWmVybyBpbmZsYXRlZCBwb2lzc29uXHRaSVAoKVx0MlxuZml0X2dhbWxzc181ID0gZ2FtbHNzKGZpc2hfZm9ybXVsYSwgZGF0YSA9IGZpc2gsIGZhbWlseT1aSVApXG5zdW1tYXJ5KGZpdF9nYW1sc3NfNSlcblxuIyBaZXJvIGluZi4gcG9pc3MuKG11IGFzIG1lYW4pXHRaSVAyKClcdDJcbmZpdF9nYW1sc3NfNiA9IGdhbWxzcyhmaXNoX2Zvcm11bGEsIGRhdGEgPSBmaXNoLCBmYW1pbHk9WklQMilcbnN1bW1hcnkoZml0X2dhbWxzc182KVxuIyBBTFNPIERJRE5cIlQgQ09OVkVSR0VcblxuIyBaZXJvIGluZmxhdGVkIFBJR1x0WklQSUcoKVx0MyAtIFBvaXNzb24gaW52ZXJzZSBHYXVzc2luXG4jIFplcm8gaW5mbGF0ZWQgU2ljaGVsXHRaSVNJQ0hFTCgpXHQ0XG5gYGAifQ== -->
-<pre class="r"><code>library(gamlss)
-# Has lots of ZI/ZA models - lots for 
-# Does Zero inflated Beta zero inflated BEZI()  3
-# Zero adjusted binomial    ZABI()  2
-# Zero adjusted beta neg. bin.  ZABNB() 4
-# Zero adjusted IG  ZAIG()  2
-# Zero adjusted logarithmic ZALG()  2
-# Zero adjusted neg. bin.   ZANBI() 3
-fit_gamlss_1 = gamlss(fish_formula, data = fish, family=ZANBI)
-summary(fit_gamlss_1)
-
-# Zero adjusted poisson ZAP()   2
-fit_gamlss_2 = gamlss(fish_formula, data = fish, family=ZAP)
-summary(fit_gamlss_2)
-
-
-# Zero adjusted Sichel  ZASICHEL()  4 - AKA Inverse Gaussian
-# Zero adjusted Zipf    ZAZIPF()    2
-# Zero inflated binomial    ZIBI()  2
-# Zero inflated beta neg. bin.  ZIBNB() 4
-fit_gamlss_3 = gamlss(fish_formula, data = fish, family=ZIBNB)
-# DIDN&quot;T CONVERGE
-
-# Zero inflated neg. bin.   ZINBI() 3
-fit_gamlss_4 = gamlss(fish_formula, data = fish, family=ZINBI)
-summary(fit_gamlss_4)
-
-# This looks dodgy too
-
-# Zero inflated poisson ZIP()   2
-fit_gamlss_5 = gamlss(fish_formula, data = fish, family=ZIP)
-summary(fit_gamlss_5)
-
-# Zero inf. poiss.(mu as mean)  ZIP2()  2
-fit_gamlss_6 = gamlss(fish_formula, data = fish, family=ZIP2)
-summary(fit_gamlss_6)
-# ALSO DIDN&quot;T CONVERGE
-
-# Zero inflated PIG ZIPIG() 3 - Poisson inverse Gaussin
-# Zero inflated Sichel  ZISICHEL()  4</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-</div>
-
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiTm90ZWJvb2sgb2YgY29kZSB0byBmaXQgbmV3IFpJIGFwcHJvYWNoZXMgdG8gdGhlIFRyYWphbiBkYXRhIGluOiBNb2RlbGxpbmcgZXhjZXNzIHplcm9zIGluIGNvdW50IGRhdGE6IEEgbmV3IHBlcnNwZWN0aXZlIG9uIG1vZGVsbGluZyBhcHByb2FjaGVzIGJ5IEhhc2xldHQgZXQgYWwiCm91dHB1dDogaHRtbF9ub3RlYm9vawotLS0KCmBgYHtyLCBpbmNsdWRlID0gRkFMU0V9CiMgQm9pbGVyIHBsYXRlIGNvZGUuCnJtKGxpc3QgPSBscygpKQpsaWJyYXJ5KGdncGxvdDIpCnRoZW1lX3NldCh0aGVtZV9idygpKQpgYGAKVGhpcyBub3RlYm9vayBjb250YWlucyB0aGUgY29kZSBhbmQgcGxvdHMgZm9yIHRoZSBwYXBlciBgWmVybyBpbmZsYXRpb24gbW9kZWxsaW5nIG9mIGNvdW50IGRhdGE6IGEgcmV2aWV3JyBieSBIYXNsZXR0IGV0IGFsIChBcnhpdiBsaW5rIGZvcnRoY29taW5nKS4gCgpUaGUgZGF0YSB3ZSB1c2UgYXJlIHN0b3JlZCBpbiB0aGUgR2l0SHViIHJlcG9zaXRvcnkgYW5kIGNhbiBiZSBsb2FkZWQgaW4gd2l0aApgYGB7cn0KbGlicmFyeSh0aWR5dmVyc2UpCnJhd19maXNoID0gcmVhZF9jc3YoImZpc2guY3N2IikKaGVhZChyYXdfZmlzaCkKYGBgCgpGcm9tIHRoZSBwYXBlciBfX1RoZSBkYXRhIHNldCBjb25jZXJucyB0aGUgbnVtYmVyIGZpc2ggY2F1Z2h0IGJ5IGdyb3VwcyBhdHRlbmRpbmcgYSBVUyBzdGF0ZSBwYXJrIChyZXNwb25zZSB2YXJpYWJsZSBgY291bnRgKS4gVGhlIGRhdGEgd2VyZSBwcmV2aW91c2x5IGFuYWx5c2VkIGJ5IFNhZmZhcmkgZXQgYWwgMjBYWC4gTWFueSBvZiB0aGUgZ3JvdXBzIGRpZCBub3QgZmlzaCBhbmQgdGh1cyB0aGVzZSBhcmUgcmVjb3JkZWQgYXMgemVyb3MuIENvdmFyaWF0ZXMgYXJlIGF2YWlsYWJsZSBpbiB0aGUgbnVtYmVyIG9mIGNoaWxkcmVuIGluIHRoZSBncm91cCAoYGNoaWxkcmVuYCksIHRoZSBudW1iZXIgb2YgYWR1bHRzIGluIHRoZSBncm91cCAoYGFkdWx0c2ApLCBhbmQgd2hldGhlciB0aGUgZ3JvdXAgYnJvdWdodCBhIGNhbXBlciB2YW4gd2l0aCB0aGVtIChgY2FtcGVyYCkuIEFsbCB0aHJlZSBjb3ZhcmlhdGVzIGFyZSBkaXNjcmV0ZS4gVGhlcmUgd2VyZSB0d28gdmVyeSBsYXJnZSB2YWx1ZXMgb2YgYGNvdW50YCAoNjUgYW5kIDE0OSkgd2hpY2ggaW4gdGhlIHByZXZpb3VzIGFuYWx5c2lzIHdlcmUgdXNlZCB0byBhbGxvdyBmb3IgZG91YmxlLWNlbnNvcmluZyAoYSBkb3VibGUgaHVyZGxlIG1vZGVsKSBidXQgd2hpY2ggd2UgcmVtb3ZlIGZvciBzaW1wbGljaXR5IGluIGV4cG9zaXRpb24uX18KClNvIHRoZSByZXNwb25zZSB2YXJpYWJsZSBpcyBgY291bnRgLCBhbmQgdGhlIGNvdmFyaWF0ZXMgYXJlIGBjYW1wZXJgLCBgY2hpbGRgLCBhbmQgYGFkdWx0c2AgKGNyZWF0ZWQgZnJvbSBgcGVyc29ucyAtIGNoaWxkYCksIFdlIGNlbnRyZSB0aGUgY292YXJpYXRlcyB0byBhaWQgaW50ZXJwcmV0YXRpb24gb2YgdGhlIGludGVyY2VwdCBpbiBsYXRlciBzZWN0aW9ucy4KCmBgYHtyfQpmaXNoID0gcmF3X2Zpc2ggJT4lIGZpbHRlcihjb3VudCA8IDYwKSAlPiUgCiAgbXV0YXRlKGFkdWx0cyA9IHBlcnNvbnMgLSBjaGlsZCwKICAgICAgICAgYWR1bHRzMiA9IGFkdWx0cyAtIG1lYW4oYWR1bHRzKSwKICAgICAgICAgY2hpbGQyID0gY2hpbGQgLSBtZWFuKGNoaWxkKSwKICAgICAgICAgY2FtcGVyMiA9IGNhbXBlciAtIG1lYW4oY2FtcGVyKSkKYGBgCgpDcmVhdGUgc29tZSBzaW1wbGUgcGxvdHMgb2YgdGhlIGRhdGEKYGBge3J9CmxpYnJhcnkoZ3JpZEV4dHJhKQpwMSA9IGdncGxvdChmaXNoLCBhZXMoeCA9IGNvdW50KSkgKwogIGdlb21faGlzdG9ncmFtKGJpbnMgPSAzMCkgKyAKICB4bGFiKCJOdW1iZXIgb2YgZmlzaCBjYXVnaHQiKQpwMiA9IGdncGxvdChmaXNoLCBhZXMoeCA9IGNoaWxkLCB5ID0gY291bnQpKSArIAogIGdlb21fcG9pbnQoKSArIAogIGdlb21faml0dGVyKHdpZHRoID0gMC4xKSArCiAgeGxhYignTnVtYmVyIG9mIGNoaWxkcmVuIGluIGdyb3VwJykgKyAKICB5bGFiKCdOdW1iZXIgb2YgZmlzaCBjYXVnaHQnKQpwMyA9IGdncGxvdChmaXNoLCBhZXMoeCA9IGFkdWx0cywgeSA9IGNvdW50KSkgKyAKICBnZW9tX3BvaW50KCkgKyAKICBnZW9tX2ppdHRlcih3aWR0aCA9IDAuMSkgKwogIHhsYWIoJ051bWJlciBvZiBhZHVsdHMgaW4gZ3JvdXAnKSArIAogIHlsYWIoJ051bWJlciBvZiBmaXNoIGNhdWdodCcpCnA0ID0gZ2dwbG90KGZpc2gsIGFlcyh4ID0gYXMuZmFjdG9yKGNhbXBlciksIHkgPSBjb3VudCkpICsgCiAgZ2VvbV9ib3hwbG90KCkgKyAKICB4bGFiKCdXaGV0aGVyIGNhbXBlciB2YW4gYnJvdWdodCBvbiB0cmlwXG4oMSA9IHllcyknKSArIAogIHlsYWIoJ051bWJlciBvZiBmaXNoIGNhdWdodCcpCmdyaWQuYXJyYW5nZShwMSwgcDIsIHAzLCBwNCwgbmNvbCA9IDIsIG5yb3cgPSAyKQpgYGAKCldlIG5vdyBnbyB0aHJvdWdoIGVhY2ggcGFja2FnZSBpbiB0dXJuLCBmaXJzdCBmaXR0aW5nIGEgc2ltcGxlIHplcm8taW5mbGF0ZWQgUG9pc3NvbiBtb2RlbCBmb3IgZWFjaCwgYW5kIHRoZW4gbG9va2luZyBhdCBzb21lIG9mIHRoZSBvdGhlciBmZWF0dXJlcy4gTWFueSBvZiB0aGUgcGFja2FnZXMgdXNlIHRoZSBzYW1lIGZvcm11bGEgdGhyb3VnaG91dCBzbyB3ZSBzZXQgdGhpcyBhdCB0aGUgc3RhcnQKYGBge3J9CmZpc2hfZm9ybXVsYSA9IGNvdW50IH4gY2hpbGQyICsgY2FtcGVyMiArIGFkdWx0czIKYGBgCgoKIyBQYWNrYWdlIDEgLSBgemljYAoKYGBge3J9CmxpYnJhcnkoemljKQpmaXRfemljID0gemljKGZvcm11bGEgPSBmaXNoX2Zvcm11bGEsIAogICAgICAgICAgICAgIGRhdGEgPSBmaXNoLCAKICAgICAgICAgICAgICBhMCA9IDEwLjAsICMgUHJpb3IgZm9yIGludGVyY2VwdCB2YXJpYW5jZQogICAgICAgICAgICAgIGIwID0gMTAuMCwgIyBQcmlvciBmb3IgY29lZmZpY2llbnQgdmFyaWFuY2VzCiAgICAgICAgICAgICAgYzAgPSAxMC4wLCAjIFByaW9yIGZvciAKICAgICAgICAgICAgICBkMCA9IDEwLjAsICMgUHJpb3IgZm9yIAogICAgICAgICAgICAgIGUwID0gMS4wLCAjIFByaW9yIGZvciAKICAgICAgICAgICAgICBmMCA9IDEuMCwgIyBQcmlvciBmb3IgCiAgICAgICAgICAgICAgbi5idXJuaW4gPSAxMDAwMCwgIyBQcmlvciBmb3IgCiAgICAgICAgICAgICAgbi5tY21jID0gMTAwMDAwLCAjIFByaW9yIGZvciAKICAgICAgICAgICAgICBuLnRoaW4gPSAxMDAsICMgUHJpb3IgZm9yIAogICAgICAgICAgICAgIHR1bmUgPSAxLjAsICMgUHJpb3IgZm9yIAogICAgICAgICAgICAgIHNjYWxlID0gRkFMU0UpICMgd2hldGhlciB0byBzY2FsZSBjb3ZhcmlhdGVzCgojIGFscGhhIGlzIHRoZSBtZWFuIGludGVyY2VwdCwgJ2dhbW1hJyB0aGUgemVyby1wYXJ0IGludGVyY2VwdCAtIG5vdCBtZW50aW9uZWQgaW4gbW9kZWwKIyBiZXRhIGFuZCBkZWx0YSBhcmUgdGhlIGNvZWZmaWNpZW50cywgc2lnbWEgaXMgdGhlIG92ZXIgZGlzcGVyc2lvbiBwYXJhbWV0ZXIKcGxvdChjYmluZChmaXRfemljJGFscGhhLCBmaXRfemljJGdhbW1hKSkgIyBMb3RzIG9mIGNvcnJlbGF0aW9uIGhlcmUgLSBhIGJpdCBiZXR0ZXIKcXBsb3QoZml0X3ppYyRhbHBoYSwgZ2VvbSA9ICdoaXN0b2dyYW0nLCBtYWluID0gJ0ludGVyY2VwdCBmb3IgbWVhbicpIApxcGxvdChmaXRfemljJGdhbW1hLCBnZW9tID0gJ2hpc3RvZ3JhbScsIG1haW4gPSAnSW50ZXJjZXB0IGZvciBaSScpICMgTG9va3MgbGlrZSBpdCBkaWRuJ3QgY29udmVyZ2UKcXBsb3QoZml0X3ppYyRiZXRhWywxXSwgZ2VvbSA9ICdoaXN0b2dyYW0nLCBtYWluID0gJ0NvZWYgb2YgcGVyc29ucycpIApxcGxvdChmaXRfemljJGJldGFbLDJdLCBnZW9tID0gJ2hpc3RvZ3JhbScsIG1haW4gPSAnQ29lZiBvZiBjYW1wZXInKQpxcGxvdChmaXRfemljJHNpZ21hLCBnZW9tID0gJ2hpc3RvZ3JhbScsIG1haW4gPSAnT0QgcGFyYW1ldGVyJykKCiMgcXVhbnQoZml0X3ppYyRiZXRhWywxXSkKIyBxdWFudChmaXRfemljJGJldGFbLDJdKSAjIEVmZmVjdCBvZiBjYW1wZXIgbm90IHF1aXRlIHNvIHdlbGwgZXN0aW1hdGVkCiMgcXVhbnQoZml0X3ppYyRzaWdtYSkKIyBNeSBndWVzcyBpcyB0aGF0IHRoZSB2YXJpYW5jZSBvZiB5IGlzIGV4cCB0aGlzIHBsdXMgZXhwIHRoZSBtZWFuCmBgYAoKIyBQYWNrYWdlIDIgLSBgcHNjbGAKCmBgYHtyfQpsaWJyYXJ5KHBzY2wpCmZpdF9wc2NsMSA9IHBzY2w6Omh1cmRsZShmaXNoX2Zvcm11bGEsIGRhdGEgPSBmaXNoLCBkaXN0ID0gJ3BvaXNzb24nLAogICAgICAgICAgICAgICAgICAgICAgICAgemVyby5kaXN0ID0gJ2Jpbm9taWFsJykKc3VtbWFyeShmaXRfcHNjbDEpCgpmaXRfcHNjbDIgPSBwc2NsOjpodXJkbGUoZmlzaF9mb3JtdWxhLCBkYXRhID0gZmlzaCwgZGlzdCA9ICduZWdiaW4nLAogICAgICAgICAgICAgICAgICAgICAgICAgemVyby5kaXN0ID0gJ2Jpbm9taWFsJykKc3VtbWFyeShmaXRfcHNjbDIpCgpmaXRfcHNjbDMgPSBwc2NsOjpodXJkbGUoZmlzaF9mb3JtdWxhLCBkYXRhID0gZmlzaCwgZGlzdCA9ICdnZW9tZXRyaWMnLAogICAgICAgICAgICAgICAgICAgICAgICAgemVyby5kaXN0ID0gJ2Jpbm9taWFsJykKc3VtbWFyeShmaXRfcHNjbDMpCgojIE5vdGUgdGhhdCBhbGwgb2YgdGhlIHplcm8gbW9kZWxzIGFyZSBpZGVudGlmaWNhbAoKIyBUaGVuIHlvdSd2ZSBnb3QgYWxsIHRoZSB6ZXJvLWluZmxhdGVkIG1vZGVscwpmaXRfcHNjbDQgPSB6ZXJvaW5mbChmaXNoX2Zvcm11bGEsIGRhdGEgPSBmaXNoLCAKICAgICAgICAgICAgICAgICAgICAgZGlzdCA9ICdwb2lzc29uJywKICAgICAgICAgICAgICAgICAgICAgbGluayA9ICdsb2dpdCcpCnN1bW1hcnkoZml0X3BzY2w0KQoKIyB0cnkgYSBodXJkbGUgbW9kZWwgd2l0aCBhIGRpZmZlcmVudCB6ZXJvIHN0cnVjdHVyZQpmaXRfcHNjbDUgPSBwc2NsOjpodXJkbGUoZmlzaF9mb3JtdWxhLCBkYXRhID0gZmlzaCwgZGlzdCA9ICdwb2lzc29uJywKICAgICAgICAgICAgICAgICAgICAgICAgIHplcm8uZGlzdCA9ICdwb2lzc29uJykKc3VtbWFyeShmaXRfcHNjbDUpCgojIExvb2sgYXQgdGhhdCEgQ2Vuc29yZWQgUG9pc3NvbgpgYGAKCiMgUGFja2FnZSAzIC0gYFZHQU1gCgpgYGB7cn0KbGlicmFyeShWR0FNKQpmaXRfVkdBTTEgPSB2Z2xtKGZpc2hfZm9ybXVsYSwgemlwb2lzc29uZmYsIGRhdGEgPSBmaXNoKQpzdW1tYXJ5KGZpdF9WR0FNMSkKCgpmaXRfVkdBTTIgPC0gdmdsbShmaXNoX2Zvcm11bGEsIHppbmVnYmlub21pYWxmZiwgZGF0YSA9IGZpc2gpCnN1bW1hcnkoZml0X1ZHQU0yKQojIFdhcm5pbmcgYWJvdXQgbm8gemVybyBpbmZsYXRpb24/CgojIFZlcnkgY29uZnVzaW5nIHJlc3VsdHMKCiMgV29uZGVyIGlmIFZHQU0gY2FuIGRvIG11bHRpdmFyaWF0ZSBpbmZsYXRpb25zPwpgYGAKCiMgUGFja2FnZSA0IC0gYGdhbWxzc2AKCmBgYHtyfQpsaWJyYXJ5KGdhbWxzcykKIyBIYXMgbG90cyBvZiBaSS9aQSBtb2RlbHMgLSBsb3RzIGZvciAKIyBEb2VzIFplcm8gaW5mbGF0ZWQgQmV0YSB6ZXJvIGluZmxhdGVkCUJFWkkoKQkzCiMgWmVybyBhZGp1c3RlZCBiaW5vbWlhbAlaQUJJKCkJMgojIFplcm8gYWRqdXN0ZWQgYmV0YSBuZWcuIGJpbi4JWkFCTkIoKQk0CiMgWmVybyBhZGp1c3RlZCBJRwlaQUlHKCkJMgojIFplcm8gYWRqdXN0ZWQgbG9nYXJpdGhtaWMJWkFMRygpCTIKIyBaZXJvIGFkanVzdGVkIG5lZy4gYmluLglaQU5CSSgpCTMKZml0X2dhbWxzc18xID0gZ2FtbHNzKGZpc2hfZm9ybXVsYSwgZGF0YSA9IGZpc2gsIGZhbWlseT1aQU5CSSkKc3VtbWFyeShmaXRfZ2FtbHNzXzEpCgojIFplcm8gYWRqdXN0ZWQgcG9pc3NvbglaQVAoKQkyCmZpdF9nYW1sc3NfMiA9IGdhbWxzcyhmaXNoX2Zvcm11bGEsIGRhdGEgPSBmaXNoLCBmYW1pbHk9WkFQKQpzdW1tYXJ5KGZpdF9nYW1sc3NfMikKCgojIFplcm8gYWRqdXN0ZWQgU2ljaGVsCVpBU0lDSEVMKCkJNCAtIEFLQSBJbnZlcnNlIEdhdXNzaWFuCiMgWmVybyBhZGp1c3RlZCBaaXBmCVpBWklQRigpCTIKIyBaZXJvIGluZmxhdGVkIGJpbm9taWFsCVpJQkkoKQkyCiMgWmVybyBpbmZsYXRlZCBiZXRhIG5lZy4gYmluLglaSUJOQigpCTQKZml0X2dhbWxzc18zID0gZ2FtbHNzKGZpc2hfZm9ybXVsYSwgZGF0YSA9IGZpc2gsIGZhbWlseT1aSUJOQikKIyBESUROIlQgQ09OVkVSR0UKCiMgWmVybyBpbmZsYXRlZCBuZWcuIGJpbi4JWklOQkkoKQkzCmZpdF9nYW1sc3NfNCA9IGdhbWxzcyhmaXNoX2Zvcm11bGEsIGRhdGEgPSBmaXNoLCBmYW1pbHk9WklOQkkpCnN1bW1hcnkoZml0X2dhbWxzc180KQoKIyBUaGlzIGxvb2tzIGRvZGd5IHRvbwoKIyBaZXJvIGluZmxhdGVkIHBvaXNzb24JWklQKCkJMgpmaXRfZ2FtbHNzXzUgPSBnYW1sc3MoZmlzaF9mb3JtdWxhLCBkYXRhID0gZmlzaCwgZmFtaWx5PVpJUCkKc3VtbWFyeShmaXRfZ2FtbHNzXzUpCgojIFplcm8gaW5mLiBwb2lzcy4obXUgYXMgbWVhbikJWklQMigpCTIKZml0X2dhbWxzc182ID0gZ2FtbHNzKGZpc2hfZm9ybXVsYSwgZGF0YSA9IGZpc2gsIGZhbWlseT1aSVAyKQpzdW1tYXJ5KGZpdF9nYW1sc3NfNikKIyBBTFNPIERJRE4iVCBDT05WRVJHRQoKIyBaZXJvIGluZmxhdGVkIFBJRwlaSVBJRygpCTMgLSBQb2lzc29uIGludmVyc2UgR2F1c3NpbgojIFplcm8gaW5mbGF0ZWQgU2ljaGVsCVpJU0lDSEVMKCkJNApgYGAK</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiTm90ZWJvb2sgb2YgY29kZSB0byBmaXQgbmV3IFpJIGFwcHJvYWNoZXMgdG8gdGhlIFRyYWphbiBkYXRhIGluOiBNb2RlbGxpbmcgZXhjZXNzIHplcm9zIGluIGNvdW50IGRhdGE6IEEgbmV3IHBlcnNwZWN0aXZlIG9uIG1vZGVsbGluZyBhcHByb2FjaGVzIGJ5IEhhc2xldHQgZXQgYWwiCm91dHB1dDogaHRtbF9ub3RlYm9vawotLS0KCmBgYHtyLCBpbmNsdWRlID0gRkFMU0V9CiMgQm9pbGVyIHBsYXRlIGNvZGUuCnJtKGxpc3QgPSBscygpKQpsaWJyYXJ5KGdncGxvdDIpCnRoZW1lX3NldCh0aGVtZV9idygpKQpgYGAKClJlYWQgaW4gdGhlIGRhdGE6CmBgYHtyfQp0cmFqYW4gPC0gYXMuZGF0YS5mcmFtZShyZWFkUkRTKCd0cmFqYW5fcmVjb2RlZC5yZHMnKSkKYGBgCgpTb3VyY2UgaW4gb3VyIGhlbHBlciBaSSBmdW5jdGlvbnM6CmBgYHtyfQpzb3VyY2UoJ1pJLlInKQpgYGAKCkZpdCB2YXJpb3VzIG1vZGVsczoKYGBge3IsIHJlc3VsdHM9J2hpZGUnLCBtZXNzYWdlPUZBTFNFfQojIFN0YW5kYXJkIFBvaXNzb24KdHJhamFuX3BvIDwtIGdsbShuc2hvb3RzIH4gMCArIHBlcmlvZDMgOiBob3Jtb25lMywgZGF0YSA9IHRyYWphbiwgZmFtaWx5ID0gcG9pc3NvbikKIyBOQi1saW4gKGNhbGxlZCBOQklJIGJ5IGdhbWxzcykKdHJhamFuX25ibGluIDwtIGdhbWxzcyhuc2hvb3RzIH4gMCArIHBlcmlvZDMgOiBob3Jtb25lMywgZGF0YSA9IHRyYWphbiwgZmFtaWx5ID0gTkJJSSkKIyBOQi1xdWFkIChjYWxsZWQgTkJJIGJ5IGdhbWxzcykKdHJhamFuX25icXVhZCA8LSBnYW1sc3MobnNob290cyB+IDAgKyBwZXJpb2QzIDogaG9ybW9uZTMsIGRhdGEgPSB0cmFqYW4sIGZhbWlseSA9IE5CSSkKIyBaSSB0eXBlcyBBIHRvIEQKdHJhamFuX3BvX3R5cGVBIDwtIFpJKG5zaG9vdHMgfiAwICsgcGVyaW9kMyA6IGhvcm1vbmUzLCBkYXRhID0gdHJhamFuLCBaSV90eXBlID0gIkEiLCBmYW1pbHkgPSAicG9pc3NvbiIpCnRyYWphbl9wb190eXBlQiA8LSBaSShuc2hvb3RzIH4gMCArIHBlcmlvZDMgOiBob3Jtb25lMywgZGF0YSA9IHRyYWphbiwgWklfdHlwZSA9ICJCIiwgZmFtaWx5ID0gInBvaXNzb24iKQp0cmFqYW5fcG9fdHlwZUMgPC0gWkkobnNob290cyB+IDAgKyBwZXJpb2QzIDogaG9ybW9uZTMsIGRhdGEgPSB0cmFqYW4sIFpJX3R5cGUgPSAiQyIsIGZhbWlseSA9ICJwb2lzc29uIikKdHJhamFuX3BvX3R5cGVEIDwtIFpJKG5zaG9vdHMgfiAwICsgcGVyaW9kMyA6IGhvcm1vbmUzLCBkYXRhID0gdHJhamFuLCBaSV90eXBlID0gIkQiLCBmYW1pbHkgPSAicG9pc3NvbiIpCmBgYAoKU3VtbWFyaXNlIHRoZSBtb2RlbHMsIGUuZy4gZm9yIFR5cGUgRDoKCmBgYHtyfQp0cmFqYW5fcG9fdHlwZUQgJT4lIHByaW50CmBgYAoKU2VlIHRoZSBvdGhlciBmdW5jdGlvbnMgaW4gdGhlIHJlcG9zaXRvcnkgZm9yIGEgbW9yZSBkZXRhaWxlZCBzZXQgb2YgY2FsY3VsYXRpb25zIGFuZCBwbG90cyB0aGF0IGFyZSBwb3NzaWJsZQ==</div>
 
 
 

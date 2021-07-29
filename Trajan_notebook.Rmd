@@ -1,10 +1,8 @@
 ---
-title: 'Code associated with the paper ''Zero inflation modelling of count data: a
-  review'''
-output:
-  html_document:
-    df_print: paged
+title: "Notebook of code to fit new ZI approaches to the Trajan data in: Modelling excess zeros in count data: A new perspective on modelling approaches by Haslett et al"
+output: html_notebook
 ---
+
 ```{r, include = FALSE}
 # Boiler plate code.
 rm(list = ls())
@@ -187,7 +185,3 @@ summary(fit_gamlss_6)
 # Zero inflated PIG	ZIPIG()	3 - Poisson inverse Gaussin
 # Zero inflated Sichel	ZISICHEL()	4
 ```
-
-# Package 6 - `INLA`
-
-Not done yet
